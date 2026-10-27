@@ -1,0 +1,22 @@
+{
+  "name": "basico-peluqueros-demo",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite --configLoader runner",
+    "build": "vite build --configLoader runner",
+    "preview": "vite preview --configLoader runner"
+  },
+  "devDependencies": {
+    "@tailwindcss/vite": "^4.1.14",
+    "tailwindcss": "^4.1.14",
+    "vite": "^7.1.7"
+  },
+  "dependencies": {
+    "gsap": "^3.13.0"
+  },
+  "allowScripts": {
+    "esbuild@0.28.2": true
+  }
+}
