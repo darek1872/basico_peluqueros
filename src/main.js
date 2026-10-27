@@ -24,17 +24,38 @@ let step = 1;
 let busy = false;
 const formError = document.querySelector('#form-error');
 const steps = [...document.querySelectorAll('.booking-step')];
-document.querySelector('#booking-form').addEventListener('submit', (event) => event.preventDefault());
+const bookingForm = document.querySelector('#booking-form');
+const stepIndicators = [...document.querySelectorAll('[data-step-indicator]')];
+bookingForm.addEventListener('submit', (event) => event.preventDefault());
 function showStep(next) {
   step = next;
   steps.forEach((element) => element.classList.toggle('active', element.dataset.step === String(next)));
-  document.querySelectorAll('[data-step-dot]').forEach((dot) => {
-    dot.classList.toggle('active', Number(dot.dataset.stepDot) <= (next === 'done' ? 3 : next));
+  const current = next === 'done' ? 4 : Number(next);
+  stepIndicators.forEach((indicator) => {
+    const indicatorStep = Number(indicator.dataset.stepIndicator);
+    const complete = indicatorStep < current;
+    const active = indicatorStep === current;
+    indicator.classList.toggle('is-complete', complete || next === 'done');
+    indicator.classList.toggle('is-active', active);
+    if (active) indicator.setAttribute('aria-current', 'step');
+    else indicator.removeAttribute('aria-current');
   });
   formError.hidden = true;
-  if (next !== 'done') document.querySelector(`#booking-form [data-step="${next}"] h3`)?.focus?.();
+  document.querySelector(`#booking-form [data-step="${next}"] h3`)?.focus();
 }
 function selectedService() { return business.services.find((s) => s.id === serviceSelect.value); }
+function updateLiveSummary() {
+  const service = selectedService();
+  document.querySelector('#live-service').textContent = service?.name ?? 'Elige un servicio';
+  document.querySelector('#live-duration').textContent = service ? `${service.duration} min · provisional` : '—';
+  document.querySelector('#live-price').textContent = service ? `${service.price} € · provisional` : '—';
+
+  const selectedDate = dateSelect.value;
+  document.querySelector('#live-date').textContent = selectedDate
+    ? new Intl.DateTimeFormat('es-ES', { weekday: 'long', day: 'numeric', month: 'long' }).format(new Date(`${selectedDate}T12:00:00`))
+    : 'Sin seleccionar';
+  document.querySelector('#live-time').textContent = document.querySelector('#time-select').value || 'Sin seleccionar';
+}
 function validateStep() {
   let message = '';
   if (step === 1) {
@@ -56,9 +77,14 @@ function fillSummary() {
   const date = new Date(`${dateSelect.value}T12:00:00`);
   document.querySelector('#summary-service').textContent = service.name;
   document.querySelector('#summary-datetime').textContent = `${new Intl.DateTimeFormat('es-ES', { dateStyle: 'long' }).format(date)} · ${document.querySelector('#time-select').value}`;
+  document.querySelector('#summary-duration').textContent = `${service.duration} min · provisional`;
   document.querySelector('#summary-name').textContent = document.querySelector('#name-input').value.trim();
   document.querySelector('#summary-price').textContent = `${service.price} € · provisional`;
 }
+serviceSelect.addEventListener('change', updateLiveSummary);
+dateSelect.addEventListener('change', updateLiveSummary);
+document.querySelector('#time-select').addEventListener('change', updateLiveSummary);
+updateLiveSummary();
 document.querySelectorAll('.next-step').forEach((button) => button.addEventListener('click', () => {
   if (busy || !validateStep()) return;
   if (step === 1) showStep(2); else { fillSummary(); showStep(3); }
@@ -66,18 +92,24 @@ document.querySelectorAll('.next-step').forEach((button) => button.addEventListe
 document.querySelectorAll('.back-step').forEach((button) => button.addEventListener('click', () => { if (!busy) showStep(step - 1); }));
 document.querySelectorAll('.select-service').forEach((button) => button.addEventListener('click', () => {
   serviceSelect.value = button.dataset.service;
+  updateLiveSummary();
   document.querySelector('#reserva').scrollIntoView({ behavior: 'smooth' });
   serviceSelect.focus({ preventScroll: true });
 }));
 document.querySelector('#confirm-demo').addEventListener('click', async () => {
   if (busy || !validateStep()) return;
   busy = true;
-  const button = document.querySelector('#confirm-demo'); button.disabled = true; button.textContent = 'Completando…';
+  const button = document.querySelector('#confirm-demo');
+  button.disabled = true; button.textContent = 'Completando…'; bookingForm.setAttribute('aria-busy', 'true');
   await new Promise((resolve) => window.setTimeout(resolve, 350));
+  bookingForm.removeAttribute('aria-busy');
   showStep('done'); busy = false;
 });
 document.querySelector('#reset-booking').addEventListener('click', () => {
-  document.querySelector('#booking-form').reset();
+  bookingForm.reset();
+  const confirmButton = document.querySelector('#confirm-demo');
+  confirmButton.disabled = false; confirmButton.textContent = 'Completar demostración';
+  updateLiveSummary();
   showStep(1);
 });
 
